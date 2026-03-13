@@ -59,6 +59,7 @@ const SignupPage = () => {
             const data = await verifyOTP(email, code);
             if (data.success) {
                 toast.success('Account verified and created!');
+                localStorage.setItem('auth_token', data.token);
                 login(data.user);
                 navigate('/dashboard');
             } else {
@@ -110,23 +111,27 @@ const SignupPage = () => {
                     </Typography>
 
                     {step === 1 ? (
-                        <Box component="form" onSubmit={handleSignupInit} sx={{ width: '100%' }}>
+                        <Box component="form" onSubmit={handleSignupInit} sx={{ width: '100%' }} autoComplete="off">
                             <TextField
                                 margin="normal"
                                 required
                                 fullWidth
+                                name="email-signup-new"
                                 label="Email Address"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
+                                autoComplete="new-password"
                             />
                             <TextField
                                 margin="normal"
                                 required
                                 fullWidth
+                                name="password-signup-new"
                                 label="Password"
                                 type={showPassword ? 'text' : 'password'}
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
+                                autoComplete="new-password"
                                 InputProps={{
                                     endAdornment: (
                                         <InputAdornment position="end">
@@ -141,10 +146,12 @@ const SignupPage = () => {
                                 margin="normal"
                                 required
                                 fullWidth
+                                name="confirm-password-signup-new"
                                 label="Confirm Password"
                                 type={showPassword ? 'text' : 'password'}
                                 value={confirmPassword}
                                 onChange={(e) => setConfirmPassword(e.target.value)}
+                                autoComplete="new-password"
                             />
                             <Button
                                 type="submit"

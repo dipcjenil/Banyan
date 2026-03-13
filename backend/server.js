@@ -11,39 +11,46 @@ const app = express();
 // Connect to DB
 connectDB();
 
-// Middleware
+// ─── CORS ──────────────────────────────────────────────────────────────────
+// Production: allow the Vercel frontend URL (set FRONTEND_URL in Render env vars)
+// Development: allow localhost Vite ports
+const allowedOrigins = [
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'http://localhost:3000',
+];
+
 app.use(cors({
     origin: function (origin, callback) {
         if (!origin) return callback(null, true);
-
-        const allowedOrigins = [
-            'http://localhost:5173',
-            'http://localhost:5174',
-            process.env.FRONTEND_URL
-        ];
-
+        
         const isAllowed =
             allowedOrigins.includes(origin) ||
             origin.endsWith('.vercel.app') ||
+            origin.endsWith('.onrender.com') ||
             origin.includes('localhost');
 
         if (isAllowed) {
             callback(null, true);
         } else {
-            callback(new Error('Not allowed by CORS'));
+            console.warn(`CORS blocked: ${origin}`);
+            callback(new Error(`CORS not allowed for origin: ${origin}`));
         }
     },
-    credentials: true
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
 }));
-
-app.use(express.json());
+// ─── Middleware ─────────────────────────────────────────────────────────────
+app.use(express.json({ limit: '10mb' }));  // allow base64 photo uploads
 app.use(cookieParser());
 
-// Routes
+// ─── Routes ─────────────────────────────────────────────────────────────────
 app.use('/api/auth', authRoutes);
 app.use('/api/registration', registrationRoutes);
 
-app.get('/', (req, res) => res.send('Banyan API Running'));
+app.get('/', (_req, res) => res.json({ status: 'Banyan API Running', env: process.env.NODE_ENV }));
 
+// ─── Start ───────────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, '0.0.0.0', () => console.log(`Server started on port ${PORT}`));
+app.listen(PORT, '0.0.0.0', () => console.log(`Server started on port ${PORT} [${process.env.NODE_ENV}]`));

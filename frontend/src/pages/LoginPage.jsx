@@ -34,6 +34,7 @@ const LoginPage = () => {
             const data = await loginInit(email, password);
             if (data.success) {
                 toast.success('Welcome back!');
+                localStorage.setItem('auth_token', data.token);
                 login(data.user);
                 navigate(data.user.role === 'admin' ? '/admin' : '/dashboard');
             } else {
@@ -87,25 +88,28 @@ const LoginPage = () => {
                             </Typography>
                         </Stack>
 
-                        <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1, width: '100%' }}>
+                        <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1, width: '100%' }} autoComplete="off">
                             <TextField
                                 margin="normal"
                                 required
                                 fullWidth
+                                name="email-login-unique"
                                 label="Corporate Email"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
+                                autoComplete="new-password"
                                 autoFocus
                             />
                             <TextField
                                 margin="normal"
                                 required
                                 fullWidth
+                                name="password-login-unique"
                                 label="Security Password"
                                 type={showPassword ? 'text' : 'password'}
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                autoComplete="current-password"
+                                autoComplete="new-password"
                                 InputProps={{
                                     endAdornment: (
                                         <InputAdornment position="end">

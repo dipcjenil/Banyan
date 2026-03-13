@@ -42,21 +42,28 @@ const signupInit = asyncHandler(async (req, res) => {
         return res.status(400).json({ success: false, message: 'Email and password are required' });
     }
 
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-        return res.status(400).json({ success: false, message: 'User already exists' });
+    let user = await User.findOne({ email });
+    if (user) {
+        if (user.isVerified) {
+            return res.status(400).json({ success: false, message: 'User already exists' });
+        }
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
     
-    const userCount = await User.countDocuments();
-    const role = userCount === 0 ? 'admin' : 'user';
+    if (user) {
+        user.password = hashedPassword;
+    } else {
+        const userCount = await User.countDocuments();
+        const role = userCount === 0 ? 'admin' : 'user';
 
-    const user = new User({
-        email,
-        password: hashedPassword,
-        role
-    });
+        user = new User({
+            email,
+            password: hashedPassword,
+            role,
+            isVerified: false
+        });
+    }
 
     const emailSent = await sendAuthOTP(user);
     if (!emailSent) {
@@ -80,6 +87,10 @@ const loginInit = asyncHandler(async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
         return res.status(400).json({ success: false, message: 'Invalid credentials' });
+    }
+
+    if (!user.isVerified && user.role !== 'admin') {
+        return res.status(403).json({ success: false, message: 'Please verify your email first' });
     }
 
     const token = signToken({ userId: user._id, role: user.role });
@@ -137,6 +148,7 @@ const verifyOTP = asyncHandler(async (req, res) => {
         sendEmail(user.email, 'Welcome to Banyan Corporate', welcomeHtml).catch(err => console.error(err));
     }
 
+    user.isVerified = true;
     await user.save();
 
     const token = signToken({ userId: user._id, role: user.role });
@@ -172,10 +184,28 @@ const logout = (req, res) => {
 const getStats = asyncHandler(async (req, res) => {
     const totalUsers = await User.countDocuments({ role: 'user' });
     const totalRegistrations = await User.countDocuments({ isRegistered: true });
-    
+    const pendingRegistrations = totalUsers - totalRegistrations;
+    const verifiedUsers = await User.countDocuments({ isVerified: true, role: 'user' });
+
+    // Build last 7 days chart data
+    const days = [];
+    for (let i = 6; i >= 0; i--) {
+        const start = new Date();
+        start.setDate(start.getDate() - i);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(start);
+        end.setHours(23, 59, 59, 999);
+
+        const signups = await User.countDocuments({ role: 'user', createdAt: { $gte: start, $lte: end } });
+        const regs = await Registration.countDocuments({ createdAt: { $gte: start, $lte: end } });
+
+        const label = start.toLocaleDateString('en-IN', { month: 'short', day: 'numeric' });
+        days.push({ label, signups, registrations: regs });
+    }
+
     res.status(200).json({
         success: true,
-        stats: { totalUsers, totalRegistrations }
+        stats: { totalUsers, totalRegistrations, pendingRegistrations, verifiedUsers, chartData: days }
     });
 });
 

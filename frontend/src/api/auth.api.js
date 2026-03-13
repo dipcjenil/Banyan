@@ -5,6 +5,14 @@ const API = axios.create({
     withCredentials: true,
 });
 
+API.interceptors.request.use((config) => {
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+});
+
 export const signupInit = async (email, password) => {
     const res = await API.post('/auth/signup-init', { email, password });
     return res.data;

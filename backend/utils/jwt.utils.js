@@ -9,11 +9,12 @@ const verifyToken = (token) => {
 };
 
 const setAuthCookie = (res, token) => {
+    const isProd = process.env.NODE_ENV === 'production';
     res.cookie('auth_token', token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'Strict',
-        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+        secure: isProd,           // must be true in production for sameSite=None
+        sameSite: isProd ? 'None' : 'Lax',  // None required for cross-origin (Vercel <-> Render)
+        maxAge: 7 * 24 * 60 * 60 * 1000    // 7 days
     });
 };
 
