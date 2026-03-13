@@ -47,7 +47,7 @@ const sendEmail = async (to, subject, html, attachments = []) => {
         console.error('Email send failed:', error.message);
         // We return true because we've already logged it to console for the developer
         // and we don't want to block the signup flow if the email service is down or misconfigured
-        return true; 
+        return true;
     }
 };
 

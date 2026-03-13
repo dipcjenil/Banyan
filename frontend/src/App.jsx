@@ -6,11 +6,13 @@ import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import DashboardPage from './pages/DashboardPage';
 import AdminDashboard from './pages/AdminDashboard';
+import BackendStatus from './components/BackendStatus';
 
 function App() {
     return (
         <BrowserRouter>
             <AuthProvider>
+                <BackendStatus />
                 <Toaster
                     position="top-right"
                     toastOptions={{
