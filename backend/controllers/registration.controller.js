@@ -182,4 +182,86 @@ const getMyRegistration = async (req, res) => {
     }
 };
 
-module.exports = { submitRegistration, getMyRegistration };
+/**
+ * POST /api/registration/admin-register (Admin only)
+ * Admin can register a user by providing their email + all registration data.
+ * If the user doesn't exist, create them. Then create the registration and send email.
+ */
+const adminRegisterUser = async (req, res) => {
+    try {
+        const { email, ...registrationData } = req.body;
+
+        if (!email) {
+            return res.status(400).json({ success: false, message: 'User email is required' });
+        }
+
+        // Find or create the user
+        let user = await User.findOne({ email: email.toLowerCase().trim() });
+        const bcrypt = require('bcryptjs');
+
+        if (!user) {
+            // Create user with a random password (they can reset later)
+            const tempPassword = Math.random().toString(36).slice(-10) + 'A1!';
+            const hashedPassword = await bcrypt.hash(tempPassword, 10);
+            user = new User({
+                email: email.toLowerCase().trim(),
+                password: hashedPassword,
+                role: 'user',
+                isVerified: true,
+                isRegistered: true
+            });
+            await user.save();
+        }
+
+        // Check if already registered
+        const existingReg = await Registration.findOne({ user: user._id });
+        if (existingReg) {
+            return res.status(400).json({ success: false, message: 'This user is already registered' });
+        }
+
+        const registrationNumber = `BN-${Math.floor(100000 + Math.random() * 900000)}`;
+
+        const registration = new Registration({
+            user: user._id,
+            ...registrationData,
+            registrationNumber
+        });
+
+        await registration.save();
+
+        // Update user status
+        user.isRegistered = true;
+        await user.save();
+
+        // Send welcome email
+        const welcomeHtml = `
+            <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px; text-align: center; border: 1px solid #eee; border-radius: 20px;">
+                <h1 style="color: #040b2a; letter-spacing: 2px;">BANYAN</h1>
+                <div style="width: 50px; height: 4px; background: #28a745; margin: 10px auto 30px;"></div>
+                <h2 style="color: #28a745;">Registration Successful!</h2>
+                <p style="color: #666; font-size: 16px; line-height: 1.6;">
+                    Hello <strong>${registrationData.fullName || email}</strong>,<br><br>
+                    You have been registered on the Banyan Digital Registry by an administrator.
+                    Your registration number is: <strong style="color: #28a745; font-size: 20px;">${registrationNumber}</strong>
+                </p>
+                <p style="color: #999; font-size: 12px; margin-top: 30px;">This is an automated message from Banyan Administrative Office.</p>
+            </div>
+        `;
+        sendEmail(email, 'Banyan Registration Confirmation', welcomeHtml).catch(err => console.error(err));
+
+        // Generate and send card asynchronously
+        generateAndSendCard(registration, email).catch(err => console.error('Delayed card send failed:', err));
+
+        return res.status(201).json({
+            success: true,
+            message: `User ${email} registered successfully. ID card will be emailed.`,
+            registration
+        });
+    } catch (error) {
+        console.error('Admin registration error:', error);
+        return res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+};
+
+module.exports = { submitRegistration, getMyRegistration, adminRegisterUser };
+

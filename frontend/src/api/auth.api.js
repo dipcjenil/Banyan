@@ -48,4 +48,9 @@ export const getRegistrations = async () => {
     return res.data;
 };
 
+export const adminRegisterUser = async (data) => {
+    const res = await API.post('/registration/admin-register', data);
+    return res.data;
+};
+
 export default API;

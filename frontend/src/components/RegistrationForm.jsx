@@ -260,7 +260,7 @@ const RegistrationForm = ({ onComplete }) => {
                         <Grid container spacing={3}>
                             <Grid item xs={12} md={6}>
                                 <TextField 
-                                    fullWidth type="number" label="Existing Liabilities (₹)" 
+                                    fullWidth type="number" label="Loan Balance (₹)" 
                                     value={formData.financialDetails.loan} 
                                     onChange={(e) => setFormData({...formData, financialDetails: {...formData.financialDetails, loan: e.target.value}})} 
                                     sx={inputStyles}
@@ -268,7 +268,7 @@ const RegistrationForm = ({ onComplete }) => {
                             </Grid>
                             <Grid item xs={12} md={6}>
                                 <TextField 
-                                    fullWidth type="number" label="Current Registry Balance (₹)" 
+                                    fullWidth type="number" label="Balance (₹)" 
                                     value={formData.financialDetails.balance} 
                                     onChange={(e) => setFormData({...formData, financialDetails: {...formData.financialDetails, balance: e.target.value}})} 
                                     sx={inputStyles}
@@ -276,7 +276,7 @@ const RegistrationForm = ({ onComplete }) => {
                             </Grid>
                             <Grid item xs={12} md={6}>
                                 <TextField 
-                                    fullWidth type="number" label="Annual Yield (₹)" 
+                                    fullWidth type="number" label="Annual Income (₹)" 
                                     value={formData.financialDetails.annualIncome} 
                                     onChange={(e) => setFormData({...formData, financialDetails: {...formData.financialDetails, annualIncome: e.target.value}})} 
                                     sx={inputStyles}
@@ -284,7 +284,7 @@ const RegistrationForm = ({ onComplete }) => {
                             </Grid>
                             <Grid item xs={12} md={6}>
                                 <TextField 
-                                    fullWidth type="number" label="Predicted Growth (₹)" 
+                                    fullWidth type="number" label="Predicted Income (₹)" 
                                     value={formData.financialDetails.predictedIncome} 
                                     onChange={(e) => setFormData({...formData, financialDetails: {...formData.financialDetails, predictedIncome: e.target.value}})} 
                                     sx={inputStyles}

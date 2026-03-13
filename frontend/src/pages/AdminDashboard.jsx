@@ -4,7 +4,8 @@ import {
     ListItem, ListItemButton, ListItemIcon, ListItemText,
     Container, Paper, Button, Avatar, Stack, CircularProgress,
     Table, TableBody, TableCell, TableContainer, TableHead,
-    TableRow, IconButton, Chip, Tooltip, Badge, LinearProgress
+    TableRow, IconButton, Chip, Tooltip, Badge, LinearProgress,
+    TextField, MenuItem
 } from '@mui/material';
 import {
     AreaChart, Area, LineChart, Line, BarChart, Bar,
@@ -29,7 +30,7 @@ import LocationOnIcon from '@mui/icons-material/LocationOn';
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { getStats, getRegistrations } from '../api/auth.api';
+import { getStats, getRegistrations, adminRegisterUser } from '../api/auth.api';
 import toast from 'react-hot-toast';
 
 const drawerWidth = 260;
@@ -139,6 +140,7 @@ const AdminDashboard = () => {
     const navItems = [
         { id: 'overview', label: 'Overview', icon: <DashboardIcon fontSize="small" /> },
         { id: 'analytics', label: 'Analytics', icon: <BarChartIcon fontSize="small" /> },
+        { id: 'register', label: 'Register User', icon: <AppRegistrationIcon fontSize="small" /> },
         { id: 'registrations', label: 'Registrations', icon: <TableChartIcon fontSize="small" /> },
     ];
 
@@ -549,6 +551,9 @@ const AdminDashboard = () => {
                             </Paper>
                         </Box>
                     )}
+
+                    {/* ─── REGISTER USER TAB ─── */}
+                    {activeTab === 'register' && <AdminRegisterForm onComplete={fetchData} />}
                 </Container>
             </Box>
         </Box>
@@ -556,3 +561,213 @@ const AdminDashboard = () => {
 };
 
 export default AdminDashboard;
+
+// ─── Admin Registration Form Component ─────────────────────────────────────────
+const AdminRegisterForm = ({ onComplete }) => {
+    const [loading, setLoading] = useState(false);
+    const [activeStep, setActiveStep] = useState(0);
+    const [formData, setFormData] = useState({
+        email: '',
+        fullName: '',
+        fatherName: '',
+        motherName: '',
+        photo: '',
+        familyDetails: [],
+        landInfo: { area: '', landType: '', address: '', location: '' },
+        financialDetails: { loan: 0, balance: 0, annualIncome: 0, predictedIncome: 0 }
+    });
+    const [member, setMember] = useState({ name: '', age: '', relation: 'Son' });
+
+    const steps = ['User Info', 'Identity', 'Assets', 'Financials'];
+
+    const addFamilyMember = () => {
+        if (!member.name || !member.age) return toast.error('Enter member name and age');
+        setFormData({ ...formData, familyDetails: [...formData.familyDetails, member] });
+        setMember({ name: '', age: '', relation: 'Son' });
+    };
+
+    const removeFamilyMember = (idx) => {
+        setFormData({ ...formData, familyDetails: formData.familyDetails.filter((_, i) => i !== idx) });
+    };
+
+    const handleSubmit = async () => {
+        if (!formData.email) return toast.error('User email is required');
+        if (!formData.fullName) return toast.error('Full name is required');
+        setLoading(true);
+        try {
+            const res = await adminRegisterUser(formData);
+            if (res.success) {
+                toast.success(res.message || 'User registered successfully!');
+                setFormData({ email: '', fullName: '', fatherName: '', motherName: '', photo: '', familyDetails: [], landInfo: { area: '', landType: '', address: '', location: '' }, financialDetails: { loan: 0, balance: 0, annualIncome: 0, predictedIncome: 0 } });
+                setActiveStep(0);
+                if (onComplete) onComplete();
+            }
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Registration failed');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const inputSx = {
+        '& .MuiOutlinedInput-root': { borderRadius: '12px', bgcolor: 'rgba(255,255,255,0.02)' },
+        '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.5)' }
+    };
+
+    const renderStep = () => {
+        switch (activeStep) {
+            case 0: // User Info + Email
+                return (
+                    <Stack spacing={3}>
+                        <Box>
+                            <Typography variant="h6" sx={{ fontWeight: 800, color: '#fff', mb: 0.5 }}>User Account</Typography>
+                            <Typography variant="body2" color="text.secondary">Enter the user's email. A new account will be created if they don't have one.</Typography>
+                        </Box>
+                        <TextField fullWidth label="User Email *" type="email" value={formData.email}
+                            onChange={(e) => setFormData({ ...formData, email: e.target.value })} sx={inputSx}
+                            InputProps={{ startAdornment: <Box component="span" sx={{ mr: 1, color: 'rgba(255,255,255,0.3)' }}><EmailIcon fontSize="small" /></Box> }}
+                        />
+                        <Box sx={{ textAlign: 'center', mt: 2 }}>
+                            <input accept="image/*" style={{ display: 'none' }} id="admin-photo-upload" type="file"
+                                onChange={(e) => {
+                                    const file = e.target.files[0];
+                                    if (file) {
+                                        const reader = new FileReader();
+                                        reader.onloadend = () => setFormData({ ...formData, photo: reader.result });
+                                        reader.readAsDataURL(file);
+                                    }
+                                }}
+                            />
+                            <label htmlFor="admin-photo-upload">
+                                <Box sx={{
+                                    width: 140, height: 160, borderRadius: 4, border: '2px dashed rgba(255,255,255,0.1)',
+                                    bgcolor: 'rgba(255,255,255,0.02)', margin: '0 auto', cursor: 'pointer',
+                                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                                    overflow: 'hidden', '&:hover': { border: '2px dashed #28a745', bgcolor: 'rgba(40,167,69,0.05)' }
+                                }}>
+                                    {formData.photo
+                                        ? <Box component="img" src={formData.photo} sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                        : <><Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', fontWeight: 700 }}>UPLOAD PHOTO</Typography></>
+                                    }
+                                </Box>
+                            </label>
+                            <Typography variant="caption" sx={{ mt: 1, display: 'block', opacity: 0.5 }}>Member Portrait (optional)</Typography>
+                        </Box>
+                    </Stack>
+                );
+            case 1: // Identity
+                return (
+                    <Stack spacing={3}>
+                        <Box>
+                            <Typography variant="h6" sx={{ fontWeight: 800, color: '#fff', mb: 0.5 }}>Primary Identity</Typography>
+                            <Typography variant="body2" color="text.secondary">Full name and parentage details.</Typography>
+                        </Box>
+                        <TextField fullWidth label="Full Name *" value={formData.fullName}
+                            onChange={(e) => setFormData({ ...formData, fullName: e.target.value })} sx={inputSx} />
+                        <TextField fullWidth label="Father's Name" value={formData.fatherName}
+                            onChange={(e) => setFormData({ ...formData, fatherName: e.target.value })} sx={inputSx} />
+                        <TextField fullWidth label="Mother's Name" value={formData.motherName}
+                            onChange={(e) => setFormData({ ...formData, motherName: e.target.value })} sx={inputSx} />
+                        <Divider sx={{ borderColor: 'rgba(255,255,255,0.05)' }} />
+                        <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#fff' }}>Family Members</Typography>
+                        <Stack direction="row" spacing={1} alignItems="flex-end">
+                            <TextField label="Name" value={member.name} onChange={(e) => setMember({ ...member, name: e.target.value })} sx={inputSx} size="small" />
+                            <TextField label="Age" type="number" value={member.age} onChange={(e) => setMember({ ...member, age: e.target.value })} sx={inputSx} size="small" style={{ width: 80 }} />
+                            <TextField select label="Relation" value={member.relation} onChange={(e) => setMember({ ...member, relation: e.target.value })} sx={inputSx} size="small" style={{ width: 120 }}>
+                                <MenuItem value="Son">Son</MenuItem>
+                                <MenuItem value="Daughter">Daughter</MenuItem>
+                                <MenuItem value="Spouse">Spouse</MenuItem>
+                            </TextField>
+                            <Button variant="outlined" onClick={addFamilyMember} sx={{ minWidth: 40, borderColor: '#28a745', color: '#28a745' }}>+</Button>
+                        </Stack>
+                        {formData.familyDetails.map((m, i) => (
+                            <Paper key={i} sx={{ p: 1.5, bgcolor: 'rgba(255,255,255,0.03)', borderRadius: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <Typography variant="body2" sx={{ color: '#fff' }}>{m.name} — {m.relation}, Age: {m.age}</Typography>
+                                <Button size="small" color="error" onClick={() => removeFamilyMember(i)}>✕</Button>
+                            </Paper>
+                        ))}
+                    </Stack>
+                );
+            case 2: // Assets
+                return (
+                    <Stack spacing={3}>
+                        <Box>
+                            <Typography variant="h6" sx={{ fontWeight: 800, color: '#fff', mb: 0.5 }}>Asset Details</Typography>
+                            <Typography variant="body2" color="text.secondary">Land holdings information.</Typography>
+                        </Box>
+                        <TextField fullWidth label="Total Area (Acres)" value={formData.landInfo.area}
+                            onChange={(e) => setFormData({ ...formData, landInfo: { ...formData.landInfo, area: e.target.value } })} sx={inputSx} />
+                        <TextField fullWidth label="Land Classification" value={formData.landInfo.landType}
+                            onChange={(e) => setFormData({ ...formData, landInfo: { ...formData.landInfo, landType: e.target.value } })} sx={inputSx} />
+                        <TextField fullWidth multiline rows={2} label="Address" value={formData.landInfo.address}
+                            onChange={(e) => setFormData({ ...formData, landInfo: { ...formData.landInfo, address: e.target.value } })} sx={inputSx} />
+                        <TextField fullWidth label="Location" value={formData.landInfo.location}
+                            onChange={(e) => setFormData({ ...formData, landInfo: { ...formData.landInfo, location: e.target.value } })} sx={inputSx} />
+                    </Stack>
+                );
+            case 3: // Financials
+                return (
+                    <Stack spacing={3}>
+                        <Box>
+                            <Typography variant="h6" sx={{ fontWeight: 800, color: '#fff', mb: 0.5 }}>Financial Profile</Typography>
+                            <Typography variant="body2" color="text.secondary">Financial information for the member.</Typography>
+                        </Box>
+                        <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
+                            <TextField fullWidth type="number" label="Loan Balance (₹)" value={formData.financialDetails.loan}
+                                onChange={(e) => setFormData({ ...formData, financialDetails: { ...formData.financialDetails, loan: e.target.value } })} sx={inputSx} />
+                            <TextField fullWidth type="number" label="Balance (₹)" value={formData.financialDetails.balance}
+                                onChange={(e) => setFormData({ ...formData, financialDetails: { ...formData.financialDetails, balance: e.target.value } })} sx={inputSx} />
+                        </Stack>
+                        <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
+                            <TextField fullWidth type="number" label="Annual Income (₹)" value={formData.financialDetails.annualIncome}
+                                onChange={(e) => setFormData({ ...formData, financialDetails: { ...formData.financialDetails, annualIncome: e.target.value } })} sx={inputSx} />
+                            <TextField fullWidth type="number" label="Predicted Income (₹)" value={formData.financialDetails.predictedIncome}
+                                onChange={(e) => setFormData({ ...formData, financialDetails: { ...formData.financialDetails, predictedIncome: e.target.value } })} sx={inputSx} />
+                        </Stack>
+                    </Stack>
+                );
+            default: return null;
+        }
+    };
+
+    return (
+        <Box>
+            <Box sx={{ mb: 4 }}>
+                <Typography variant="h4" sx={{ fontWeight: 900, color: '#fff' }}>Register New User</Typography>
+                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.4)', mt: 0.5 }}>Fill in the details below. The user will receive their ID card via email.</Typography>
+            </Box>
+            <Paper sx={{ p: { xs: 3, md: 5 }, borderRadius: 4, background: 'linear-gradient(145deg, #0a192f 0%, #040b2a 100%)', border: '1px solid rgba(255,255,255,0.05)', maxWidth: 700, mx: 'auto' }}>
+                {/* Stepper */}
+                <Stack direction="row" spacing={1} justifyContent="center" sx={{ mb: 4 }}>
+                    {steps.map((label, idx) => (
+                        <Chip key={label} label={label} size="small" clickable onClick={() => setActiveStep(idx)}
+                            sx={{
+                                fontWeight: 700, fontSize: '0.7rem', letterSpacing: 0.5,
+                                bgcolor: activeStep === idx ? 'rgba(0,230,118,0.15)' : 'rgba(255,255,255,0.04)',
+                                color: activeStep === idx ? '#00e676' : 'rgba(255,255,255,0.4)',
+                                border: activeStep === idx ? '1px solid rgba(0,230,118,0.3)' : '1px solid rgba(255,255,255,0.06)',
+                            }}
+                        />
+                    ))}
+                </Stack>
+
+                {renderStep()}
+
+                {/* Navigation */}
+                <Stack direction="row" justifyContent="space-between" sx={{ mt: 4, pt: 3, borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                    <Button disabled={activeStep === 0} onClick={() => setActiveStep(p => p - 1)}
+                        sx={{ borderRadius: 2, px: 3, color: '#fff', bgcolor: 'rgba(255,255,255,0.05)' }}>Back</Button>
+                    {activeStep === steps.length - 1 ? (
+                        <Button variant="contained" onClick={handleSubmit} disabled={loading}
+                            sx={{ borderRadius: 2, px: 4, fontWeight: 800, background: 'linear-gradient(90deg, #28a745 0%, #1e7e34 100%)', boxShadow: '0 10px 20px rgba(40,167,69,0.3)' }}>
+                            {loading ? <CircularProgress size={22} color="inherit" /> : 'Register & Send Email'}
+                        </Button>
+                    ) : (
+                        <Button variant="contained" onClick={() => setActiveStep(p => p + 1)}
+                            sx={{ borderRadius: 2, px: 4, fontWeight: 700, bgcolor: '#fff', color: '#000', '&:hover': { bgcolor: '#eee' } }}>Next</Button>
+                    )}
+                </Stack>
+            </Paper>
+        </Box>
+    );
+};
